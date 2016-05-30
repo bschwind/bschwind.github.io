@@ -22,7 +22,7 @@
 	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,700" rel="stylesheet" type="text/css">
 
 	<!-- Used for page header -->
-	<link href='https://fonts.googleapis.com/css?family=Arvo' rel='stylesheet' type='text/css'>
+	<link href="https://fonts.googleapis.com/css?family=Arvo" rel="stylesheet" type="text/css">
 
 	<style type="text/css">
 		html {
@@ -100,6 +100,10 @@
 			text-decoration: none;
 		}
 
+		p code {
+			background-color: #e7e7e7;
+		}
+
 		.post {
 			margin: 40px auto;
 			max-width: 700px;
@@ -134,23 +138,24 @@
 
 	<!-- Google Analytics -->
 	<script>
-		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(function(i,s,o,g,r,a,m){i["GoogleAnalyticsObject"]=r;i[r]=i[r]||function(){
 		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
 		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-		})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+		})(window,document,"script","https://www.google-analytics.com/analytics.js","ga");
 
-		ga('create', 'UA-78486548-1', 'auto');
-		ga('send', 'pageview');
+		ga("create", "UA-78486548-1", "auto");
+		ga("send", "pageview");
 
 	</script>
+	<!-- End Google Analytics -->
 </head>
 <body>
 <header><div class="head-container"><a href="/"><h1>Brian Schwind</h1></a></div></header>
 <div class="post">
 <h1>Sending Infrared Commands From a Raspberry Pi Without LIRC</h1>
 <h5>May 29th, 2016</h5>
-<p><strong>TL;DR</strong> - I made a <a href="https://github.com/bschwind/ir-slinger">small C library</a> for sending infrared packets easily on the Raspberry Pi, wrote about how to reverse engineer an infrared remote for use in a home automation server, and made a simple infrared LED circuit controlled by the Pi. There's also a bonus control panel written in ClojureScript! If you're frustrated with LIRC, want to send dynamic infrared signals, or want to learn more about how devices communicate with infrared light, read on!</p>
-<p>Let's say you have some devices in your home that are controlled by infrared remotes. It could be a TV, an air conditioner, a ceiling light, an Xbox, or really anything you have a remote for. You want to control these things programmatically, but don't know anything about infrared, other than it sends some sort of signal to the devices you want to control. I was in this situation a few months ago and decided to learn about how infrared works and see if I could reverse-engineer my air conditioner and ceiling light. This article documents the steps I took to accomplish this, starting with a Raspberry Pi and ending with a working system to control infrared devices from a web interface from anywhere in the world. In order to better understand the low level details of basic infrared communication, I shunned tools that abstracted these details away, and built a simple LED circuit that connects directly to the Raspberry Pi's output pins.</p>
+<p><strong>TL;DR</strong> - I made a <a href="https://github.com/bschwind/ir-slinger">small C library</a> for sending infrared packets easily on the Raspberry Pi, wrote about how to reverse engineer an infrared remote for use in a <a href="https://github.com/bschwind/automation-server/">home automation server</a>, and made a simple infrared LED circuit controlled by the Pi. There's also a bonus <a href="https://github.com/bschwind/automation-server/blob/master/web/src/automation/core.cljs">control panel</a> written in ClojureScript! If you're frustrated with LIRC, want to send dynamic infrared signals, or want to learn more about how devices communicate with infrared light, read on!</p>
+<p>So let's say you have some devices in your home that are controlled by infrared remotes. It could be a TV, an air conditioner, a ceiling light, an Xbox, or really anything you have a remote for. You want to control these things programmatically, but don't know anything about infrared, other than it sends some sort of signal to the devices you want to control. I was in this situation a few months ago and decided to learn about how infrared works and see if I could reverse-engineer my air conditioner and ceiling light. This article documents the steps I took to accomplish this, starting with a Raspberry Pi and ending with a working system to control infrared devices from a web interface from anywhere in the world. In order to better understand the low level details of basic infrared communication, I shunned tools that abstracted these details away, and built a simple LED circuit that connects directly to the Raspberry Pi's output pins.</p>
 <p>Note: I try to explain some of these concepts in simple terms, but you'll need some programming experience to make your way through this in its entirety. If you're already familiar with electronics and programming, I might come off as a little patronizing. I just want programmers and non-programmers alike to be able to take something away from this article.</p>
 <p>Minimum required components:</p>
 <ul>
@@ -415,7 +420,8 @@ Final: 0x41b658a7
 </blockquote>
 <p>is infuriating. If the # character is the first non-whitespace character on the line, but it is not the <em>first</em> character, LIRC will complain about syntax issues with the config file (or it'll just crash, I forget and I don't care).</p>
 <p>However, by some miracle, I didn't give up and tried enough permutations that I bruteforced my way to a working config. <a href="https://www.youtube.com/watch?v=aiJjoJHIRZY">Results here</a></p>
-<p>In the video you can actually see our hex code contained in the config file I was editing with one hand. Great, it works! Now how the hell do I do this without the madness of LIRC? Why do we even need LIRC to begin with? Can't we just write a python script and turn the pins on and off, kind of like how we were reading from the infrared receiver? Good question but no, you can't.</p>
+<p>In the video you can actually see our hex code contained in the config file I was editing with one hand. Great, it works! I even have a <a href="https://github.com/bschwind/rpiStuff/tree/master/irTransmitter">small writeup</a> on getting LIRC working if you're into that.</p>
+<p>Now how the hell do I do this without the madness of LIRC? Why do we even need LIRC to begin with? Can't we just write a python script and turn the pins on and off, kind of like how we were reading from the infrared receiver? Good question but no, you can't.</p>
 <p>In order for infrared to work properly, you need a pretty consistent 38 kHz signal to be generated. That means you need to go through an entire on/off cycle every 1/38000 seconds, or roughly every 26 microseconds. That's no problem, you think. Even the first Raspberry Pi had a 700 MHz CPU, more than fast enough to change a pin on and off at 38 kHz. But you don't get all that 700 MHz to yourself. You have to run the OS, which takes quite a sizable chunk of that processing speed away. Then you have the fact that you're running Python, an interpreted language that might run a garbage collector at any time, delaying your code unpredictably. And even a compiled program written in C or C++ could be interrupted by the operating system, as your program is not the only thing running and the OS will stop your program to give other programs a chance to run. So you might get the correct speed with C, but the OS interruptions means you won't get a consistent wave, and thus the signal won't work, or it won't work reliably.</p>
 <p>So how does LIRC get away with it? I don't know the exact terminology, but it uses something like a &quot;kernel module&quot; or &quot;kernel extension&quot; that runs at the same level as the operating system. In other words, it runs on the bare CPU and can do whatever the OS can. By doing this, it can prevent itself from being interrupted by the OS, which means it can generate a consistent signal on the Pi's GPIO pins. I'm not sure if there's a time limit to how long it can do this, but it definitely has enough time to send an infrared signal. In the video I linked at the beginning, he used an Arduino to send the signal. An Arduino doesn't have a big time-slicing OS running on it to interrupt your program, so it can get away with just generating the signal as you would with a Python script (except Arduino runs a version of C). But I wanted to run everything on a Pi because of its networking capabilities and the fact that I can use practially any language I want. I <em>could</em> attach an Arduino to the Pi, but then I'd have to power two microcontrollers and it's just a clunky solution. I could alternatively use an Arduino with a Wi-Fi adapter, but then I'd lose the convenience of having a full-blown and well-supported Linux environment like the Pi provides.</p>
 <h2>A better way to send IR signals (pigpio)</h2>
@@ -628,7 +634,7 @@ sendTrailingPulse = 1
 <p>With an IR remote, you store local state. When you press a button, it changes the state on the remote and sends that new state out as an infrared signal. The remote does not receive any response from the device. In practice, I could do the same thing. It would be <em>nice</em> to get a response with the current state of the device, but it's not necessary. So keeping in mind that I don't neccessarily need two-way communication, I thought of Amazon SQS as a way to provide one-way commands that can access the Pi. Amazon SQS stands for Simple Queue Service. It's a message queue that you can throw messages onto, and one of many devices can receive a message from the queue and process it, or put it back in the queue if the device can't handle it. It works by having a client send a command to a known URL (the URL of the SQS queue), and a &quot;worker&quot; polling that same URL for new messages.</p>
 <p>So what I could do is write a web interface (or a native android/ios app) that posts JSON messages to the queue's URL. Then the Pi would be continuously monitoring that queue for new messages. When it receives a message that is properly formatted, it can extract the data and use it to send a command. Simple! I was actually really pleased with this idea because it requires no network changes on my end, and protects the Pi from being exposed to the Internet at large. The only things getting in from outside are SQS messages, and those can also be locked down so only clients with the right authentication can send messages. The disadvantage is that the clients don't receive any feedback from the Pi, though I could work around that by having the Pi post its latest state to AWS S3 (Simple Storage Service). I ended up using the SQS method for passing data to the Pi and so far it's been great! I expected the latency to be kind of bad, but it's actually quite fast considering all the hops involved from phone to Pi.</p>
 <h2>The server</h2>
-<p>I wrote the server with NodeJS because it's quick, easy, and is fast enough for what I wanted to do. The source code can be found <a href="https://github.com/bschwind/automation-server">here</a>. The server originally (and still does) have an HTTP API exposed on the local network that I can use to control my light and air conditioner, but the UI I made talks to the Pi through SQS. In the future, if I make an Android app then it can detect when it's on my wifi network and use the local HTTP API to query the current state of my devices. The server keeps a history of air conditioner states in an SQLite database, is responsible for routing queue messages to the correct device, constructing IR codes, and actually sends the IR signal by starting a child process. Instead of having one executable on the Pi that takes in a ton of parameters, I made two separate ones: <code>ceiling-light</code> and <code>aircon</code>. <code>ceiling-light</code> has everything hardcoded, you just call it and it sends a signal to my light. <code>aircon</code> takes a binary string as an argument and sends that to the air conditioner (with hardcoded timing values). I just call these from Node with the child_process module, which was straightforward and quick to implement. It's a pretty simple server and isn't the focus of this article, so I won't go into much more detail than that. I'm pleased with the design though, I can see myself easily adding other infrared devices into this code.</p>
+<p>I wrote the server with NodeJS because it's quick, easy, and is fast enough for what I wanted to do. The source code can be found <a href="https://github.com/bschwind/automation-server/">here</a>. The server originally (and still does) have an HTTP API exposed on the local network that I can use to control my light and air conditioner, but the UI I made talks to the Pi through SQS. In the future, if I make an Android app then it can detect when it's on my wifi network and use the local HTTP API to query the current state of my devices. The server keeps a history of air conditioner states in an SQLite database, is responsible for routing queue messages to the correct device, constructing IR codes, and actually sends the IR signal by starting a child process. Instead of having one executable on the Pi that takes in a ton of parameters, I made two separate ones: <code>ceiling-light</code> and <code>aircon</code>. <code>ceiling-light</code> has everything hardcoded, you just call it and it sends a signal to my light. <code>aircon</code> takes a binary string as an argument and sends that to the air conditioner (with hardcoded timing values). I just call these from Node with the child_process module, which was straightforward and quick to implement. It's a pretty simple server and isn't the focus of this article, so I won't go into much more detail than that. I'm pleased with the design though, I can see myself easily adding other infrared devices into this code.</p>
 <p>One thing to note is the security of this setup. Currently, the queue accepts messages from anyone, but only the Pi can pull messages off of it. Additionally, the client must send a password along with any messages sent to the queue. The pi will only act on messages that have the correct password (which can be arbitrarily chosen). An attacker doesn't get any feedback on whether or not the password is correct, so there's little to be gained by trying to bruteforce it. I could go a step further and only allow specific users to send messages to the queue, and I'll probably have to do that before posting this article... It's not a perfect security setup by any means, but it's enough to prevent random people from turning your apartment into a furnace.</p>
 <h2>The web interface</h2>
 <p><p><div class="image-container"><a href="images/appScreenshot.png" target="_blank"><img src="images/resized/appScreenshot.png" alt="Final control panel for my air conditioner and light"></a><p>Final control panel for my air conditioner and light</p></div></p></p>
@@ -637,7 +643,26 @@ sendTrailingPulse = 1
 <p><p><div class="image-container"><a href="images/figwheel.jpg" target="_blank"><img src="images/resized/figwheel.jpg" alt="Testing multiple browsers and devices at once on every file save, thanks to Figwheel. Overkill, yet lots of fun."></a><p>Testing multiple browsers and devices at once on every file save, thanks to Figwheel. Overkill, yet lots of fun.</p></div></p></p>
 <p>I got the bare minimum set up so I could turn my light and air conditioner on and off, change the temperature, change the mode from heating to cooling, and enter the password needed for the server to accept the messages. By the time I got this functionality set up, I was basically satisfied and got a bit lazy about implementing the rest (such as the fan speed control). I finished what I set out to do though, which was to reverse engineer my infrared devices and control my heating/cooling remotely. It's not often I finish a personal project from start to finish so I'm very pleased with this one, and I hope my ir-slinger library can be helpful to others who want to do something similar.</p>
 
+<!-- Disqus -->
+<div id="disqus_thread"></div>
+<script>
+var disqus_config = function () {
+this.page.url = "https://blog.bschwind.com/2016/05/29/sending-infrared-commands-from-a-raspberry-pi-without-lirc/";
+this.page.identifier = "sending-infrared-commands-from-a-raspberry-pi-without-lirc";
+};
+
+(function() {
+var d = document, s = d.createElement("script");
+
+s.src = "//bschwind.disqus.com/embed.js";
+
+s.setAttribute("data-timestamp", +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>If you want comments from Disqus, enable JavaScript or whatever. I don't blame you if you don't.</a></noscript>
 </div>
+<!-- End Disqus -->
 <footer>
 	<div class="foot-stripe"></div>
 	<div class="foot-container">
