@@ -134,20 +134,46 @@
 			text-align: center;
 			font-size: 14px;
 		}
+
+		.filename-container {
+			width: fit-content;
+			padding-left: 30px;
+			padding-right: 10px;
+			margin-left: -10px;
+			margin-bottom: -20px;
+			height: 40px;
+			position: relative;
+			background: #2454ad;
+			color: white;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-family: monospace;
+			font-size: 16px;
+		}
+		.filename-container:after {
+			content: "";
+			position: absolute;
+			left: 0;
+			bottom: 0;
+			width: 0;
+			height: 0;
+			border-left: 20px solid #F6F6F6;
+			border-top: 20px solid transparent;
+			border-bottom: 20px solid transparent;
+		}
+		.filename-container:before {
+			content: "";
+			position: absolute;
+			right: -20px;
+			bottom: 0;
+			width: 0;
+			height: 0;
+			border-left: 20px solid #2454ad;
+			border-top: 20px solid transparent;
+			border-bottom: 20px solid transparent;
+		}
 	</style>
-
-	<!-- Google Analytics -->
-	<script>
-		(function(i,s,o,g,r,a,m){i["GoogleAnalyticsObject"]=r;i[r]=i[r]||function(){
-		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-		})(window,document,"script","https://www.google-analytics.com/analytics.js","ga");
-
-		ga("create", "UA-78486548-1", "auto");
-		ga("send", "pageview");
-
-	</script>
-	<!-- End Google Analytics -->
 </head>
 <body>
 <header><div class="head-container"><a href="/"><h1>Brian Schwind</h1></a></div></header>
@@ -204,6 +230,7 @@
 <p>So now that we have a simple remote to test, let's decode the signal! I wrote a Python script to read values from the infrared receiver pin. I found that it runs fast enough to accomplish what we want to do. The goal for recording our remote is to work out the actual 1s and 0s the signal represents, and the rough timings of the pulses. To do this, we will be measuring the times that the signal is pulsing, and the times that it is pausing. The infrared receiver is always outputting a 1 (no signal). When we do a &quot;digital read&quot; on the input pin and receive a 0, that means the infrared receiver picked up an infrared pulse at 38 kHz (because that's the frequency the receiver is rated for). We'll take note of when the receiver first outputs a 0, and measure time until we encounter another 1. If our remote follows the <a href="https://techdocs.altium.com/display/FPGA/NEC+Infrared+Transmission+Protocol">NEC protocol</a>, we should see a roughly 9 millisecond leading pulse. Due to the fact that we're running an interpreted language on a non-realtime OS, the timing values will vary quite a lot, but for the most part they should center on 9 milliseconds.</p>
 <p>After the first 9 millisecond pulse, we should see a 4.5 millisecond gap, and then the actual 1/0 signal will start.</p>
 <p>Here's the Python script to identify these pulses and print them out. I did my best to explain what's going on in the comments.</p>
+<pre><code class="language-python,main.py"><div class="filename-container"><p>main.py</p></div>
 <pre class="hljs"><code><span class="hljs-keyword">import</span> RPi.GPIO <span class="hljs-keyword">as</span> GPIO
 <span class="hljs-keyword">import</span> math
 <span class="hljs-keyword">import</span> os
@@ -217,11 +244,11 @@ INPUT_WIRE = <span class="hljs-number">16</span>
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(INPUT_WIRE, GPIO.IN)
 
-<span class="hljs-keyword">while</span> <span class="hljs-keyword">True</span>:
+<span class="hljs-keyword">while</span> <span class="hljs-literal">True</span>:
 	value = <span class="hljs-number">1</span>
 	<span class="hljs-comment"># Loop until we read a 0</span>
 	<span class="hljs-keyword">while</span> value:
-		value = GPIO.input(INPUT_WIRE)
+		value = GPIO.<span class="hljs-built_in">input</span>(INPUT_WIRE)
 
 	<span class="hljs-comment"># Grab the start time of the command</span>
 	startTime = datetime.now()
@@ -229,14 +256,14 @@ GPIO.setup(INPUT_WIRE, GPIO.IN)
 	<span class="hljs-comment"># Used to buffer the command pulses</span>
 	command = []
 
-	<span class="hljs-comment"># The end of the "command" happens when we read more than</span>
+	<span class="hljs-comment"># The end of the &quot;command&quot; happens when we read more than</span>
 	<span class="hljs-comment"># a certain number of 1s (1 is off for my IR receiver)</span>
 	numOnes = <span class="hljs-number">0</span>
 
 	<span class="hljs-comment"># Used to keep track of transitions from 1 to 0</span>
 	previousVal = <span class="hljs-number">0</span>
 
-	<span class="hljs-keyword">while</span> <span class="hljs-keyword">True</span>:
+	<span class="hljs-keyword">while</span> <span class="hljs-literal">True</span>:
 
 		<span class="hljs-keyword">if</span> value != previousVal:
 			<span class="hljs-comment"># The value has changed, so calculate the length of this run</span>
@@ -256,16 +283,16 @@ GPIO.setup(INPUT_WIRE, GPIO.IN)
 			<span class="hljs-keyword">break</span>
 
 		previousVal = value
-		value = GPIO.input(INPUT_WIRE)
+		value = GPIO.<span class="hljs-built_in">input</span>(INPUT_WIRE)
 	
-	<span class="hljs-keyword">print</span> <span class="hljs-string">"----------Start----------"</span>
+	<span class="hljs-built_in">print</span> <span class="hljs-string">&quot;----------Start----------&quot;</span>
 	<span class="hljs-keyword">for</span> (val, pulse) <span class="hljs-keyword">in</span> command:
-		<span class="hljs-keyword">print</span> val, pulse
-	<span class="hljs-keyword">print</span> <span class="hljs-string">"-----------End-----------\n"</span>
+		<span class="hljs-built_in">print</span> val, pulse
+	<span class="hljs-built_in">print</span> <span class="hljs-string">&quot;-----------End-----------\n&quot;</span>
 
-	<span class="hljs-keyword">print</span> <span class="hljs-string">"Size of array is "</span> + str(len(command))
+	<span class="hljs-built_in">print</span> <span class="hljs-string">&quot;Size of array is &quot;</span> + <span class="hljs-built_in">str</span>(<span class="hljs-built_in">len</span>(command))
 
-</code></pre>
+</code></pre></code></pre>
 <p><p><div class="image-container"><a href="images/raspiPins.png" target="_blank"><img src="images/resized/raspiPins.png" alt="Raspberry Pi GPIO pin layout for reference. This script uses pin #16, or GPIO23"></a><p>Raspberry Pi GPIO pin layout for reference. This script uses pin #16, or GPIO23</p></div></p></p>
 <p>It just runs in an infinite loop, waiting for a 0 to be read from the infrared receiver. It'll then take note of the time and keep reading 0s and 1s, each time making note of how long a run of 1s or 0s was. Once it reads 10,000 1s, it decides the command has probably ended and returns to the top of the loop. 10,000 is arbitrary and could differ depending on your Pi's CPU speed or other factors, so you may need to adjust it. Once the command has ended, the script will print out the pulses and their durations. Here's some sample output when I ran the script and pressed my light switch remote:</p>
 <pre class="hljs"><code>0 8982
@@ -391,7 +418,7 @@ GPIO.setup(INPUT_WIRE, GPIO.IN)
 <pre class="hljs"><code>01000001101101100101100010100111
 </code></pre>
 <p>I did this one by hand, but for my air conditioning remote, you can imagine it getting tedious. The algorithm to convert these pulses into binary is pretty straightforward and it's simple enough to adapt our Python script to do it for us. We can use the heuristic that any gap over 1000 microseconds is likely a logical 1, otherwise it's a logical 0. Looking at the data, we can see that this is sufficient to distinguish the two. You could even write a cutesy one-liner to convert this &quot;command&quot; array into a binary string:</p>
-<pre class="hljs"><code>binaryString = <span class="hljs-string">""</span>.join(map(<span class="hljs-keyword">lambda</span> x: <span class="hljs-string">"1"</span> <span class="hljs-keyword">if</span> x[<span class="hljs-number">1</span>] &gt; <span class="hljs-number">1000</span> <span class="hljs-keyword">else</span> <span class="hljs-string">"0"</span>, filter(<span class="hljs-keyword">lambda</span> x: x[<span class="hljs-number">0</span>] == <span class="hljs-number">1</span>, command)))
+<pre class="hljs"><code>binaryString = <span class="hljs-string">&quot;&quot;</span>.join(<span class="hljs-built_in">map</span>(<span class="hljs-keyword">lambda</span> x: <span class="hljs-string">&quot;1&quot;</span> <span class="hljs-keyword">if</span> x[<span class="hljs-number">1</span>] &gt; <span class="hljs-number">1000</span> <span class="hljs-keyword">else</span> <span class="hljs-string">&quot;0&quot;</span>, <span class="hljs-built_in">filter</span>(<span class="hljs-keyword">lambda</span> x: x[<span class="hljs-number">0</span>] == <span class="hljs-number">1</span>, command)))
 
 </code></pre>
 <p>In the script, <code>command</code> is an array of tuples of the structure (pulse_value, pulse_duration) where pulse_value is a 0 or 1, and pulse_duration is an integer in microseconds. We filter this array to only include the gaps (<code>x[0] == 1</code>) because the gap is what distinguishes a 1 from a 0. Then we map all gaps with a duration (<code>x[1]</code>) greater than 1000 to be a &quot;1&quot;, otherwise a &quot;0&quot;. All those 1s and 0s are then joined together to form the binary string.</p>
@@ -425,7 +452,7 @@ Final: 0x41b658a7
 <p>In order for infrared to work properly, you need a pretty consistent 38 kHz signal to be generated. That means you need to go through an entire on/off cycle every 1/38000 seconds, or roughly every 26 microseconds. That's no problem, you think. Even the first Raspberry Pi had a 700 MHz CPU, more than fast enough to change a pin on and off at 38 kHz. But you don't get all that 700 MHz to yourself. You have to run the OS, which takes quite a sizable chunk of that processing speed away. Then you have the fact that you're running Python, an interpreted language that might run a garbage collector at any time, delaying your code unpredictably. And even a compiled program written in C or C++ could be interrupted by the operating system, as your program is not the only thing running and the OS will stop your program to give other programs a chance to run. So you might get the correct speed with C, but the OS interruptions means you won't get a consistent wave, and thus the signal won't work, or it won't work reliably.</p>
 <p>So how does LIRC get away with it? I don't know the exact terminology, but it uses something like a &quot;kernel module&quot; or &quot;kernel extension&quot; that runs at the same level as the operating system. In other words, it runs on the bare CPU and can do whatever the OS can. By doing this, it can prevent itself from being interrupted by the OS, which means it can generate a consistent signal on the Pi's GPIO pins. I'm not sure if there's a time limit to how long it can do this, but it definitely has enough time to send an infrared signal. In the video I linked at the beginning, he used an Arduino to send the signal. An Arduino doesn't have a big time-slicing OS running on it to interrupt your program, so it can get away with just generating the signal as you would with a Python script (except Arduino runs a version of C). But I wanted to run everything on a Pi because of its networking capabilities and the fact that I can use practially any language I want. I <em>could</em> attach an Arduino to the Pi, but then I'd have to power two microcontrollers and it's just a clunky solution. I could alternatively use an Arduino with a Wi-Fi adapter, but then I'd lose the convenience of having a full-blown and well-supported Linux environment like the Pi provides.</p>
 <h2>A better way to send IR signals (pigpio)</h2>
-<p>With that high level understanding of LIRC, I did some searching and came across a library called <a href="http://abyz.co.uk/rpi/pigpio/index.html">pigpio</a>. What caught my eye was this sentence on the feature list:</p>
+<p>With that high level understanding of LIRC, I did some searching and came across a library called <a href="https://github.com/joan2937/pigpio">pigpio</a>. What caught my eye was this sentence on the feature list:</p>
 <blockquote>
 <p>the construction of arbitrary waveforms to give precise timing of output GPIO level changes (accurate to <strong>a few microseconds</strong>).</p>
 </blockquote>
@@ -433,8 +460,9 @@ Final: 0x41b658a7
 <p>I found pigpio to be a fantastic library, and it gets bonus points for being a C project that builds on the first try. Thank you, joan2937, you've made a super helpful library and this project wouldn't have been nearly as pleasant without it.</p>
 <p>pigpio offers a ton of functionality, but I was only interested in generating waveforms with microsecond timing. I set out to create a wrapper library that is just designed for sending an infrared signal on a Pi's GPIO pin and nothing fancier than that. I wanted to be able to specify the pin, the pulse frequency, and the timing values for infrared pulses since the timing on remotes can vary. I also wanted it to accept a binary string to send, to make it easy to use it with dynamic infrared codes. I ended up creating <a href="https://github.com/bschwind/ir-slinger">ir-slinger</a> to accomplish this. It just has one function, irSling(), which takes in all the pulse parameters, a GPIO pin number, and a binary string, and it will do its work to set up the infrared wave and send it over the pin. pigpio has tons of other features and even has the ability to output the signal on multiple pins at once. I decided to simplify my library to just work on one pin at a time but it can easily be modified to support multiple pins.</p>
 <p>I'm not going to go into too much detail with the C library. It's a header-only library, so just include it in your own program and pass a few linker flags to the compiler. Those flags are documented in the README. Instead of making one executable that takes in a billion parameters, I settled on making an executable per infrared device I have, and hard coding the pulse parameters in the code itself. For example, this is the entire source code for the ceiling light program:</p>
+<pre><code class="language-c,main.c"><div class="filename-container"><p>main.c</p></div>
 <pre class="hljs"><code><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdio.h&gt;</span></span>
-<span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-string">"irslinger.h"</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&quot;irslinger.h&quot;</span></span>
 
 <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-keyword">int</span> argc, <span class="hljs-keyword">char</span> *argv[])</span>
 </span>{
@@ -448,8 +476,8 @@ Final: 0x41b658a7
 	<span class="hljs-keyword">int</span> zeroPulse = <span class="hljs-number">562</span>;             <span class="hljs-comment">// The duration of a pulse in microseconds when sending a logical 0</span>
 	<span class="hljs-keyword">int</span> oneGap = <span class="hljs-number">1688</span>;               <span class="hljs-comment">// The duration of the gap in microseconds when sending a logical 1</span>
 	<span class="hljs-keyword">int</span> zeroGap = <span class="hljs-number">562</span>;               <span class="hljs-comment">// The duration of the gap in microseconds when sending a logical 0</span>
-	<span class="hljs-keyword">int</span> sendTrailingPulse = <span class="hljs-number">1</span>;       <span class="hljs-comment">// 1 = Send a trailing pulse with duration equal to "onePulse"</span>
-	                                 <span class="hljs-comment">// 0 = Don't send a trailing pulse</span>
+	<span class="hljs-keyword">int</span> sendTrailingPulse = <span class="hljs-number">1</span>;       <span class="hljs-comment">// 1 = Send a trailing pulse with duration equal to &quot;onePulse&quot;</span>
+	                                 <span class="hljs-comment">// 0 = Don&#x27;t send a trailing pulse</span>
 
 	<span class="hljs-keyword">int</span> result = irSling(
 		outPin,
@@ -462,12 +490,12 @@ Final: 0x41b658a7
 		oneGap,
 		zeroGap,
 		sendTrailingPulse,
-		<span class="hljs-string">"01000001101101100101100010100111"</span>);
+		<span class="hljs-string">&quot;01000001101101100101100010100111&quot;</span>);
 	
-	return result;
+	<span class="hljs-keyword">return</span> result;
 }
 
-</code></pre>
+</code></pre></code></pre>
 <p>If you save that as <code>test.c</code>, it can be compiled on the Pi with <code>gcc -o light test.c -lm -lpigpio -pthread -lrt</code> and you'll get an executable file called <code>light</code> if everything compiled. This assumes pigpio is installed on your Pi, see the <a href="https://github.com/bschwind/ir-slinger">github repo</a> for more detailed steps on getting this working.</p>
 <p>This executable can then be easily called on the command line or as a child process from another language (which is exactly what I do...more on that later).</p>
 <p>So to recap, we learned about the NEC infrared protocol, used an infrared receiver to decode the signal a simple remote is sending, and then found and used a cool C library to allow us to send arbitrary signals. Every time we run the program above, it sends the signal one time to my ceiling light. The final missing piece is the actual circuit you need to connect to the Pi to get an infrared LED blinking. I'm an electronics rookie so I can't speak authoritatively on this part of the project. I put something together that works, but I'm sure an actual EE could make it more robust (and do a better soldering job). I'm very open to any improvements that can be made!</p>
@@ -527,95 +555,96 @@ Final: 0x41b658a7
 <p>It gets tedious, but that's basically all there is to it. Keep changing one variable at a time, take note of your current state, record the binary strings, then compare the bits until you find where they differ. I was interested in the temperature, mode (heat, cool, dry), and fan speed. My full analysis is <a href="https://github.com/bschwind/rpiStuff/blob/master/irTransmitter/airConRemote.txt">here</a></p>
 <h2>Constructing the signal in code</h2>
 <p>Ignoring the on/off timer part of the signal, you can construct the full signal with this code (JavaScript):</p>
+<pre><code class="language-javascript,constructSignal.js"><div class="filename-container"><p>constructSignal.js</p></div>
 <pre class="hljs"><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getIRCodeFromState</span>(<span class="hljs-params">state</span>) </span>{
-	<span class="hljs-keyword">var</span> code = <span class="hljs-string">"1000000000001000000000000000001011111101111111110000000000110011110011000100100110110110"</span>;
+	<span class="hljs-keyword">var</span> code = <span class="hljs-string">&quot;1000000000001000000000000000001011111101111111110000000000110011110011000100100110110110&quot;</span>;
 
 	<span class="hljs-comment">// Button category</span>
 	<span class="hljs-keyword">switch</span> (state.button) {
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"UP/DOWN"</span>:
-			code += <span class="hljs-string">"0010001011011101"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;UP/DOWN&quot;</span>:
+			code += <span class="hljs-string">&quot;0010001011011101&quot;</span>;
 			<span class="hljs-keyword">break</span>;
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"MODE"</span>:
-			code += <span class="hljs-string">"1100100000110111"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;MODE&quot;</span>:
+			code += <span class="hljs-string">&quot;1100100000110111&quot;</span>;
 			<span class="hljs-keyword">break</span>;
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"FAN_SPEED"</span>:
-			code += <span class="hljs-string">"0100001010111101"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;FAN_SPEED&quot;</span>:
+			code += <span class="hljs-string">&quot;0100001010111101&quot;</span>;
 			<span class="hljs-keyword">break</span>;
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"FAN_DIRECTION"</span>:
-			code += <span class="hljs-string">"1000000101111110"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;FAN_DIRECTION&quot;</span>:
+			code += <span class="hljs-string">&quot;1000000101111110&quot;</span>;
 			<span class="hljs-keyword">break</span>;
 		<span class="hljs-keyword">default</span>:
-			code += <span class="hljs-string">"1100100000110111"</span>; <span class="hljs-comment">// MODE</span>
+			code += <span class="hljs-string">&quot;1100100000110111&quot;</span>; <span class="hljs-comment">// MODE</span>
 			<span class="hljs-keyword">break</span>;
 	}
 
 	<span class="hljs-comment">// Temperature code</span>
 	<span class="hljs-keyword">var</span> temperatureCode = binaryUtil.decimalToBinary(state.temperature);
-	temperatureCode = temperatureCode.split(<span class="hljs-string">""</span>).reverse().join(<span class="hljs-string">""</span>);
-	temperatureCode = <span class="hljs-string">"00"</span> + temperatureCode + <span class="hljs-string">"0"</span>;
+	temperatureCode = temperatureCode.split(<span class="hljs-string">&quot;&quot;</span>).reverse().join(<span class="hljs-string">&quot;&quot;</span>);
+	temperatureCode = <span class="hljs-string">&quot;00&quot;</span> + temperatureCode + <span class="hljs-string">&quot;0&quot;</span>;
 	temperatureCode += binaryUtil.inverseBinaryString(temperatureCode);
 
 	code += temperatureCode;
 
 	<span class="hljs-comment">// Timer-specific code. This means no timer has been set.</span>
-	code += <span class="hljs-string">"00000000111111110000000011111111000000001111111100000000111111110000000011111111"</span>;
+	code += <span class="hljs-string">&quot;00000000111111110000000011111111000000001111111100000000111111110000000011111111&quot;</span>;
 
 	<span class="hljs-comment">// Mode</span>
-	<span class="hljs-keyword">var</span> modeFanString = <span class="hljs-string">""</span>;
+	<span class="hljs-keyword">var</span> modeFanString = <span class="hljs-string">&quot;&quot;</span>;
 	<span class="hljs-keyword">switch</span> (state.mode) {
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"HEAT"</span>:
-			modeFanString += <span class="hljs-string">"0110"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;HEAT&quot;</span>:
+			modeFanString += <span class="hljs-string">&quot;0110&quot;</span>;
 			<span class="hljs-keyword">break</span>;
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"DEHUMIDIFY"</span>:
-			modeFanString += <span class="hljs-string">"1010"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;DEHUMIDIFY&quot;</span>:
+			modeFanString += <span class="hljs-string">&quot;1010&quot;</span>;
 			<span class="hljs-keyword">break</span>;
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"COOL"</span>:
-			modeFanString += <span class="hljs-string">"1100"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;COOL&quot;</span>:
+			modeFanString += <span class="hljs-string">&quot;1100&quot;</span>;
 			<span class="hljs-keyword">break</span>;
 		<span class="hljs-keyword">default</span>:
-			modeFanString += <span class="hljs-string">"1010"</span>; <span class="hljs-comment">// Dehumidify</span>
+			modeFanString += <span class="hljs-string">&quot;1010&quot;</span>; <span class="hljs-comment">// Dehumidify</span>
 			<span class="hljs-keyword">break</span>;
 	}
 
 	<span class="hljs-comment">// Fan speed</span>
 	<span class="hljs-keyword">switch</span> (state.fan_speed) {
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"AUTO"</span>:
-			modeFanString += <span class="hljs-string">"1010"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;AUTO&quot;</span>:
+			modeFanString += <span class="hljs-string">&quot;1010&quot;</span>;
 			<span class="hljs-keyword">break</span>;
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"STRONG"</span>:
-			modeFanString += <span class="hljs-string">"0010"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;STRONG&quot;</span>:
+			modeFanString += <span class="hljs-string">&quot;0010&quot;</span>;
 			<span class="hljs-keyword">break</span>;
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"WEAK"</span>:
-			modeFanString += <span class="hljs-string">"1100"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;WEAK&quot;</span>:
+			modeFanString += <span class="hljs-string">&quot;1100&quot;</span>;
 			<span class="hljs-keyword">break</span>;
-		<span class="hljs-keyword">case</span> <span class="hljs-string">"VERY_WEAK"</span>:
-			modeFanString += <span class="hljs-string">"0100"</span>;
+		<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;VERY_WEAK&quot;</span>:
+			modeFanString += <span class="hljs-string">&quot;0100&quot;</span>;
 			<span class="hljs-keyword">break</span>;
 		<span class="hljs-keyword">default</span>:
-			modeFanString += <span class="hljs-string">"1010"</span>; <span class="hljs-comment">// AUTO</span>
+			modeFanString += <span class="hljs-string">&quot;1010&quot;</span>; <span class="hljs-comment">// AUTO</span>
 			<span class="hljs-keyword">break</span>;
 	}
 
 	code += modeFanString;
 	code += binaryUtil.inverseBinaryString(modeFanString);
 
-	<span class="hljs-keyword">if</span> (state.power_status === <span class="hljs-string">"ON"</span>) {
-		code += <span class="hljs-string">"100010110111010000000000111111110000000011111111"</span>;
+	<span class="hljs-keyword">if</span> (state.power_status === <span class="hljs-string">&quot;ON&quot;</span>) {
+		code += <span class="hljs-string">&quot;100010110111010000000000111111110000000011111111&quot;</span>;
 	} <span class="hljs-keyword">else</span> {
-		code += <span class="hljs-string">"100000110111110000000000111111110000000011111111"</span>;
+		code += <span class="hljs-string">&quot;100000110111110000000000111111110000000011111111&quot;</span>;
 	}
 
 	<span class="hljs-keyword">return</span> code;
 }
 
-</code></pre>
+</code></pre></code></pre>
 <p>Given a state object, such as</p>
 <pre class="hljs"><code>{
-	mode: <span class="hljs-string">"HEAT"</span>,
-	temperature: <span class="hljs-number">23</span>,
-	fan_speed: <span class="hljs-string">"AUTO"</span>,
-	power_status: <span class="hljs-string">"ON"</span>,
-	button: <span class="hljs-string">"MODE"</span>
+	<span class="hljs-attr">mode</span>: <span class="hljs-string">&quot;HEAT&quot;</span>,
+	<span class="hljs-attr">temperature</span>: <span class="hljs-number">23</span>,
+	<span class="hljs-attr">fan_speed</span>: <span class="hljs-string">&quot;AUTO&quot;</span>,
+	<span class="hljs-attr">power_status</span>: <span class="hljs-string">&quot;ON&quot;</span>,
+	<span class="hljs-attr">button</span>: <span class="hljs-string">&quot;MODE&quot;</span>
 }
 </code></pre>
 <p>the function above will return the binary string we need to send through our infrared LED. At this point, it's a matter of knowing the parameters for the NEC protocol, and using the ir-slinger library I made earlier. I guessed that the frequency would be 38 kHz since that is common. Through some measurements of the signal with my python script, I found the following parameters:</p>
